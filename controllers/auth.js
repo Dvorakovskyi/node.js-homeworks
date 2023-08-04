@@ -4,6 +4,7 @@ import { userSchema } from "../schemas/userSchema.js";
 import "dotenv/config";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
+import gravatar from "gravatar";
 
 const { JWT_SECRET } = process.env;
 
@@ -26,8 +27,13 @@ const signup = async (req, res, next) => {
       throw HttpError(409);
     }
 
+    const avatarURL = gravatar.url(email);
     const hashPassword = await bcryptjs.hash(password, 10);
-    const newUser = await User.create({ ...req.body, password: hashPassword });
+    const newUser = await User.create({
+      ...req.body,
+      password: hashPassword,
+      avatarURL,
+    });
 
     res.status(201).json(newUser);
   } catch (error) {
