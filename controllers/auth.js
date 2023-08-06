@@ -2,11 +2,16 @@ import { User } from "../models/index.js";
 import { HttpError } from "../helpters/index.js";
 import { userSchema } from "../schemas/userSchema.js";
 import "dotenv/config";
+import path from "path";
+import fs from "fs/promises";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import gravatar from "gravatar";
+import Jimp from "jimp";
 
 const { JWT_SECRET } = process.env;
+
+const avatarPath = path.resolve("public", "avatars");
 
 const signup = async (req, res, next) => {
   try {
@@ -126,4 +131,42 @@ const updateStatusSubscription = async (req, res, next) => {
   }
 };
 
-export default { signup, login, logout, getCurrent, updateStatusSubscription };
+const updateUserAvatar = async (req, res, next) => {
+  try {
+    const { _id } = req.user;
+    const { path: tmpPath, filename } = req.file;
+
+    const user = await User.findById(_id);
+
+    if (!user) {
+      throw HttpError(401, "Not authorized");
+    }
+
+    const newPath = path.join(avatarPath, filename);
+
+    const avatar = await Jimp.read(tmpPath);
+    await avatar.resize(250, 250);
+    await avatar.writeAsync(tmpPath);
+
+    await fs.rename(tmpPath, newPath);
+
+    const avatarURL = path.join("avatars", filename);
+
+    await User.findByIdAndUpdate(_id, { avatarURL });
+
+    res.json({
+      avatarURL,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export default {
+  signup,
+  login,
+  logout,
+  getCurrent,
+  updateStatusSubscription,
+  updateUserAvatar,
+};
